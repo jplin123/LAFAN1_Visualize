@@ -59,16 +59,16 @@ G1: (30 FPS)
     left_shoulder_roll_joint
     left_shoulder_yaw_joint
     left_elbow_joint
-    left_wrist_roll_joint
+    left_wrist_roll_joint  19
     left_wrist_pitch_joint
-    left_wrist_yaw_joint
-    right_shoulder_pitch_joint
+    left_wrist_yaw_joint   21
+    right_shoulder_pitch_joint 22
     right_shoulder_roll_joint
     right_shoulder_yaw_joint
-    right_elbow_joint
-    right_wrist_roll_joint
-    right_wrist_pitch_joint
-    right_wrist_yaw_joint
+    right_elbow_joint         25
+    right_wrist_roll_joint 26
+    right_wrist_pitch_joint 34
+    right_wrist_yaw_joint 35
 H1_2: (30 FPS)
     root_joint(XYZQXQYQZQW)
     left_hip_yaw_joint
