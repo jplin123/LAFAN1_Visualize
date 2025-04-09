@@ -32,6 +32,26 @@ python issacgym_visualize.py --file_name dance1_subject2 --robot_type g1
 - `robot_type` can choose: `g1`, `h1`, `h2`
 
 
+## 4. convert data format
+
+you can use this code to convert data format as `.pkl`, this data format can be used to train policy with [ASAP](https://github.com/LeCAR-Lab/ASAP.git)
+
+```sh
+python cvs_to_pkl.py
+```
+after running this order, you can get a file in `pkl_data/`, But you need to note that this code can only convert `g1 robot` data currently.If you want to use it to convert `h1 robot` data, you can modify it based on that.
+
+#### pkl data description
+```sh
+data_dump[data_name]={
+                "root_trans_offset": root_trans_all.cpu().detach().numpy(),
+                "pose_aa": pose_aa.squeeze().cpu().detach().numpy(),   
+                "dof": dof_pos_all.detach().cpu().numpy(), 
+                "root_rot": root_rot_all.cpu().numpy(),
+                "fps": 30
+                }
+```
+
 ## 4. Dataset Collection Description
 
 This database stores the retargeted trajectories in CSV format. Each row in the CSV file corresponds to the original motion capture data for each frame, recording the configurations of all joints in the humanoid robot in the following order:
