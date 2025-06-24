@@ -143,3 +143,5 @@ H1: (30 FPS)
 ## If encountered error with "`GLIBCXX_3.4.32' not found" error at runtime.
 conda install -c conda-forge libstdcxx-ng --update-deps
 
+conda install -c conda-forge pinocchio
+
