@@ -149,3 +149,4 @@ conda install -c conda-forge joblib
 
 pip install trimesh
 
+pip install pin
