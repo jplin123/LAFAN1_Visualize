@@ -151,4 +151,4 @@ pip install trimesh
 
 pip install pin
 
-conda install -c conda-forge numpy-stl
+conda install -c conda-forge meshio
