@@ -140,4 +140,6 @@ H1: (30 FPS)
     right_shoulder_yaw_joint
     right_elbow_joint
 ```
+## If encountered error with "`GLIBCXX_3.4.32' not found" error at runtime.
+conda install -c conda-forge libstdcxx-ng --update-deps
 
