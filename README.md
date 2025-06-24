@@ -147,3 +147,5 @@ conda install -c conda-forge pinocchio
 
 conda install -c conda-forge joblib
 
+pip install trimesh
+
