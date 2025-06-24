@@ -145,3 +145,5 @@ conda install -c conda-forge libstdcxx-ng --update-deps
 
 conda install -c conda-forge pinocchio
 
+conda install -c conda-forge joblib
+
