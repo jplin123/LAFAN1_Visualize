@@ -150,3 +150,5 @@ conda install -c conda-forge joblib
 pip install trimesh
 
 pip install pin
+
+conda install -c conda-forge numpy-stl
