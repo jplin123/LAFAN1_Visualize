@@ -145,10 +145,8 @@ H1: (30 FPS)
 ## If encountered error with "`GLIBCXX_3.4.32' not found" error at runtime.
 conda install -c conda-forge libstdcxx-ng --update-deps
 
-conda install -c conda-forge pinocchio
+conda install -c conda-forge pinocchio=2.6.* hpp-fcl eigenpy
 
 conda install -c conda-forge joblib
 
 pip install trimesh
-
-pip install hpp-fcl
