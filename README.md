@@ -20,6 +20,7 @@ Install Isaac Gym
    -  pip install typeguard
    - `cd isaacgym/python && pip install -e .`
    - Try running an example `cd examples && python 1080_balls_of_solitude.py`
+   - if error: export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
    - For troubleshooting check docs `isaacgym/docs/index.html`)
 
 ```sh
