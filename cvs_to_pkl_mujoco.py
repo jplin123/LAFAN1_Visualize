@@ -1,12 +1,9 @@
-import os
-import argparse
-import numpy as np
+import os, argparse, numpy as np
 from isaacgym import gymapi, gymutil, gymtorch
-import torch
-import time
-# import pinocchio as pin
+import torch, time, joblib
 from scipy.spatial.transform import Rotation as R
-import joblib
+import mujoco
+print(mujoco.__version__)
 
 G1_ROTATION_AXIS = torch.tensor([[
     [0, 1, 0], # l_hip_pitch 
@@ -49,13 +46,14 @@ class MotionPlayer:
         self.args = args
         if self.args.robot_type == 'g1':
             urdf_path = "robot_description/g1/g1_29dof_rev_1_0.urdf"
-            # self.robot = pin.RobotWrapper.BuildFromURDF('robot_description/g1/g1_29dof_rev_1_0.urdf', 'robot_description/g1', pin.JointModelFreeFlyer())
-            # self.Tpose = np.array([0,0,0.785,0,0,0,1,
-            #                         -0.15,0,0,0.3,-0.15,0,
-            #                         -0.15,0,0,0.3,-0.15,0,
-            #                         0,0,0,
-            #                         0, 1.57,0,1.57,0,0,0,
-            #                         0,-1.57,0,1.57,0,0,0]).astype(np.float32)
+            self.model = mujoco.MjModel.from_xml_path(urdf_path)
+            self.data = mujoco.MjData(self.model)
+            self.Tpose = np.array([0,0,0.785,0,0,0,1,
+                                    -0.15,0,0,0.3,-0.15,0,
+                                    -0.15,0,0,0.3,-0.15,0,
+                                    0,0,0,
+                                    0, 1.57,0,1.57,0,0,0,
+                                    0,-1.57,0,1.57,0,0,0]).astype(np.float32)
         elif self.args.robot_type == 'h1_2':
             urdf_path = "robot_description/h1_2/h1_2_wo_hand.urdf"
         elif self.args.robot_type == 'h1':
@@ -132,15 +130,15 @@ class MotionPlayer:
             
         self.set_camera(self.viewer)
         motion_data = self.load_data()
+
+        num_dofs = self.gym.get_asset_dof_count(self.asset)
+        if num_dofs == 0:
+            raise RuntimeError("Asset has no DOFs — check URDF import")
         
         root_state_tensor = torch.zeros((1, 13), dtype=torch.float32)
-        dof_state_tensor = torch.zeros((29, 2), dtype=torch.float32)
+        dof_state_tensor = torch.zeros((num_dofs, 2), dtype=torch.float32)
         
-        root_trans_all = []
-        pose_aa_all = []
-        dof_pos_all = []
-        root_rot_all = []
-        rot_vec_all = []
+        root_trans_all, root_rot_all, dof_pos_all, rot_vec_all = [], [], [], []
         
         max_motion_length = 400  # motion_data.shape[0]
         # main loop
@@ -149,20 +147,16 @@ class MotionPlayer:
                 start_time = time.time()
                 configuration = torch.from_numpy(motion_data[frame_nr, :])
                 
-                # root_trans, root_rot, rot_vec = self.get_key_point(motion_data[frame_nr, :])
+                root, rot, rv = self.get_key_point(configuration)
                 
-                root_trans_all.append(configuration[:3])
-                root_rot_all.append(configuration[3:7])
+                root_trans_all.append(torch.from_numpy(root))
+                rot_vec_all.append(torch.from_numpy(rv))
+                root_rot_all.append(torch.from_numpy(rot))
                 dof_pos_all.append(configuration[7:])
-                
-                rotation = R.from_quat(configuration[3:7])
-                rotvec = rotation.as_rotvec()
-                rotvec = torch.from_numpy(rotvec)
-                
-                rot_vec_all.append(rotvec)
-                
+
+                # update Isaac viewer
                 root_state_tensor[0, :7] = configuration[:7]
-                dof_state_tensor[:,0] = configuration[7:]
+                dof_state_tensor[:, 0] = configuration[7:]
                 
                 self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(root_state_tensor))
                 self.gym.set_dof_state_tensor(self.sim, gymtorch.unwrap_tensor(dof_state_tensor))
@@ -218,40 +212,21 @@ class MotionPlayer:
     def draw_line(self, start_point, end_point, color, env_id):
         gymutil.draw_line(start_point, end_point, color, self.gym, self.viewer, self.env)
     
-    # get key point by piconicon
-    # def get_key_point(self, configuration = None):
-    #     self.clear_lines()
-    #     self.robot.framesForwardKinematics(self.Tpose if configuration is None else configuration)
-        
-    #     _rot_vec = []
-    #     _root_trans = []
-    #     _root_rot = []
-        
-    #     for visual in self.robot.visual_model.geometryObjects:
-    #         frame_name = visual.name[:-2]
-    #         frame_id = self.robot.model.getFrameId(frame_name)
-    #         parent_joint_id = self.robot.model.frames[frame_id].parentJoint
-    #         parent_joint_name = self.robot.model.names[parent_joint_id]
-    #         joint_tf = self.robot.data.oMi[parent_joint_id]
-            
-    #         ref_body_pos = joint_tf.translation 
-    #         ref_body_rot = joint_tf.rotation
-            
-    #         rotation = R.from_matrix(ref_body_rot)
-    #         rot_vec = rotation.as_rotvec()
-        
-    #         if frame_name == 'pelvis':
-    #             _rot_vec = rot_vec
-    #             _root_trans = ref_body_pos
-    #             _root_rot = ref_body_rot
+    # get key point
+    def get_key_point(self, cfg):
+        self.clear_lines()
+        # Assign root and dof positions to MuJoCo model
+        self.data.qpos = cfg[7:]
+        mujoco.mj_forward(self.model, self.data)
 
-    #         color_inner = (0.0, 0.0, 0.545)
-    #         color_inner = tuple(color_inner)
+        # Extract pelvis and compute rotvec
+        bid = self.model.body('torso_link').id
+        pos = self.data.xpos[bid].copy()
+        mat = self.data.xmat[bid].reshape(3,3).copy()
+        rv = R.from_matrix(mat).as_rotvec()
 
-    #         # import ipdb; ipdb.set_trace()
-    #         self.draw_sphere(ref_body_pos, 0.04, color_inner, 0)
-            
-    #     return np.array(_root_trans), np.array(_root_rot), np.array(_rot_vec)
+        # Optionally draw others (not shown)
+        return pos, mat.flatten(), rv
 
     def get_robot_state(self):
         rigid_body_state = self.gym.acquire_rigid_body_state_tensor(self.sim)
