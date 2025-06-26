@@ -140,7 +140,7 @@ class MotionPlayer:
         
         root_trans_all, root_rot_all, dof_pos_all, rot_vec_all = [], [], [], []
         
-        max_motion_length = 400  # motion_data.shape[0]
+        max_motion_length = 1900  # motion_data.shape[0]
         # main loop
         while not self.gym.query_viewer_has_closed(self.viewer):
             for frame_nr in range(80, max_motion_length):
